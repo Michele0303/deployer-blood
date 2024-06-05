@@ -1,0 +1,14 @@
+ssh:
+  hostname: "4.231.51.33"
+  username: "player1"
+  password: "Cyberchallenge2024!"
+
+telegram:
+  token: "6991574106:AAHHGq3UXdvkdno6ifmY4OK7wfEw8X7hPss"
+  chat_id: "-4241676425"
+
+services:
+  destructive_farm:
+    git_repo: "https://github.com/DestructiveVoice/DestructiveFarm.git"
+  packmate:
+    git_repo: "https://gitlab.com/packmate/starter.git"
