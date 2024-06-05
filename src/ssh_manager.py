@@ -1,3 +1,5 @@
+import logging
+
 import paramiko
 
 
@@ -15,6 +17,7 @@ class SSHManager:
             self.client.connect(hostname=self.hostname,
                                 username=self.username,
                                 password=self.password)
+            self.setup_environment()
         except paramiko.ssh_exception.NoValidConnectionsError as e:
             print(f"Unable to connect to {self.hostname}: {e}")
             raise ConnectionError(e)
@@ -27,13 +30,14 @@ class SSHManager:
         if self.client is None:
             raise ValueError("Connection not established.")
 
-        try:
-            print(f"[-] Run {command}")
-            stdin, stdout, stderr = self.client.exec_command(command)
-            return stdout.read().decode(), stderr.read().decode()
-        except Exception as e:
-            print(f"Failed to execute command {command}: {e}")
+        logging.info(f"Executing command: {command}")
+
+        stdin, stdout, stderr = self.client.exec_command(command)
+        return stdout.read().decode(), stderr.read().decode()
 
     def setup_environment(self):
-        command = f"echo {self.password} | sudo -S apt install -y zip"
-        self.client.execute_command(command)
+        command = "sudo -S apt install -y zip"
+        stdin, stdout, stderr = self.client.exec_command(command)
+        stdin.write(self.password + "\n")
+        stdin.flush()
+        return stdout.read().decode(), stderr.read().decode()
