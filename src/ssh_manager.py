@@ -8,11 +8,10 @@ class SSHManager:
         self.hostname = hostname
         self.username = username
         self.password = password
-        self.client = None
+        self.client = paramiko.SSHClient()
 
     def connect(self):
         try:
-            self.client = paramiko.SSHClient()
             self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             self.client.connect(hostname=self.hostname,
                                 username=self.username,
@@ -36,7 +35,7 @@ class SSHManager:
         return stdout.read().decode(), stderr.read().decode()
 
     def setup_environment(self):
-        command = "sudo -S apt install -y zip"
+        command = "sudo -S apt install -y zip curl"
         stdin, stdout, stderr = self.client.exec_command(command)
         stdin.write(self.password + "\n")
         stdin.flush()

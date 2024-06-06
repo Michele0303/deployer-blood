@@ -14,6 +14,7 @@ class DockerManager:
 
     def setup_and_zip_services(self):
         services_info = []
+
         for service_dir in self.discover_services():
             if 'backup' in service_dir or 'services' in service_dir:
                 continue
