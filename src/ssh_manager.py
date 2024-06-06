@@ -1,5 +1,4 @@
 import logging
-
 import paramiko
 
 
@@ -34,9 +33,24 @@ class SSHManager:
         stdin, stdout, stderr = self.client.exec_command(command)
         return stdout.read().decode(), stderr.read().decode()
 
-    def setup_environment(self):
-        command = "sudo -S apt install -y zip curl"
-        stdin, stdout, stderr = self.client.exec_command(command)
+    def execute_command_as_root(self, command):
+        if self.client is None:
+            raise ValueError("Connection not established.")
+
+        command = "sudo -S -p '' %s" % command
+        logging.info(f"Executing command: {command}")
+
+        stdin, stdout, stderr = self.client.exec_command(command=command)
         stdin.write(self.password + "\n")
         stdin.flush()
-        return stdout.read().decode(), stderr.read().decode()
+
+        stdoutput = [line for line in stdout]
+        stderroutput = [line for line in stderr]
+        for output in stdoutput:
+            logging.info("Job: %s" % (output.strip()))
+
+        return stdoutput, stderroutput
+
+    def setup_environment(self):
+        self.execute_command_as_root('apt update')
+        self.execute_command_as_root('apt install -y curl zip')

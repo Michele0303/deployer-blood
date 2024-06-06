@@ -6,7 +6,6 @@ from docker_manager import DockerManager
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
 def load_config(path="../config/config.yaml"):
     with open(path, 'r') as file:
         return yaml.safe_load(file)
@@ -28,7 +27,9 @@ def main():
         ssh_manager.connect()
 
         docker_manager = DockerManager(ssh_manager)
-        services_info = docker_manager.setup_and_zip_services()
+        services_info = docker_manager.setup_and_zip_services(
+            config['ssh']['services_dir']
+        )
 
         for service in services_info:
             ssh_manager.execute_command(
