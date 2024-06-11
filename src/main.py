@@ -1,8 +1,7 @@
 import yaml
 import logging
 
-from ssh_manager import SSHManager
-from docker_manager import DockerManager
+from src.ssh_manager import SSHManager
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -22,32 +21,37 @@ def get_service_ports_from_docker_ps(ssh_manager, service_name):
         return host_port
 
 
-def service_process(ssh_manager, service) -> bool:
+def service_process(ssh_manager, service):
+
+    # zip service
+    current_path = ssh_manager.execute_command('pwd').stdout.strip()
+    zip_name = f'{service}.zip'
+    ssh_manager.execute_command(f'zip -r {zip_name} {service}')
 
     with ssh_manager.client.cd(service):
 
         output = ssh_manager.execute_command(f"ls").stdout
         if 'docker-compose.yml' not in output:
-            return False
+            return None, None
 
+        # start the service
         ssh_manager.execute_command('docker compose up -d')
         ssh_manager.execute_command('docker ps')
 
+    # get port of service
     port = get_service_ports_from_docker_ps(ssh_manager, service)
     logging.info(f"Ports for service {service}: {port}")
 
-
-
-    return True
+    full_path_zip = f"{current_path}/{zip_name}"
+    return full_path_zip, port
 
 
 def main():
+
     config = load_config()
 
-    token = config['telegram']['token']
+    telegram_token = config['telegram']['token']
     chat_id = config['telegram']['chat_id']
-
-    services_dir = config['ssh']['services_dir']
 
     ssh_manager = SSHManager(
         config['ssh']['hostname'],
@@ -55,29 +59,25 @@ def main():
         config['ssh']['password']
     )
 
+    services_dir = config['ssh']['services_dir']
+
     try:
         ssh_manager.connect()
         with ssh_manager.client.cd(services_dir):
             services = ssh_manager.execute_command('ls').stdout.split()
 
             for service in services:
-                is_ok = service_process(ssh_manager, service)
-                if not is_ok:
-                    print("Non va bene:", service)
-                    services.remove(service)
+                zip_file, port = service_process(ssh_manager, service)
+                if not zip_file or not port:
+                    logging.info(f"ERROR: {service}")
+                    continue
 
-        """
+                # send to telegram
+                ssh_manager.execute_command(
+                    f'curl -F "chat_id={chat_id}" -F "document=@{zip_file}" '
+                    f'-F "caption={port}" '
+                    f'"https://api.telegram.org/bot{telegram_token}/sendDocument"')
 
-        docker_manager = DockerManager(ssh_manager)
-        services_info = docker_manager.setup_and_zip_services(
-            config['ssh']['services_dir']
-        )
-
-        for service in services_info:
-            ssh_manager.execute_command(
-                f'curl -F "chat_id={chat_id}" -F "document=@{service}" '
-                f'"https://api.telegram.org/bot{token}/sendDocument"')
-        """
     finally:
         pass
         #ssh_manager.disconnect()
