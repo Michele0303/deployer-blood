@@ -7,7 +7,7 @@ ssh:
 
 telegram:
   token: "6991574106:AAHHGq3UXdvkdno6ifmY4OK7wfEw8X7hPss"
-  chat_id: "-4241676425"
+  chat_id: "-4207111775"
 
 services:
   destructive_farm:
