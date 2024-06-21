@@ -1,7 +1,7 @@
 import yaml
 import logging
 
-from src.ssh_manager import SSHManager
+from ssh_manager import SSHManager
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -41,10 +41,15 @@ def process_service(ssh_manager, service):
         ssh_manager.execute_command('docker ps')
 
     # get port of service
-    port = get_service_ports_from_docker_ps(ssh_manager, service)
-    logging.info(f"Ports for service {service}: {port}")
+    try:
+        port = get_service_ports_from_docker_ps(ssh_manager, service)
+        logging.info(f"Ports for service {service}: {port}")
 
-    return full_path_zip, port
+        return full_path_zip, port
+    except:
+        pass
+
+    return full_path_zip, None
 
 
 def main():
@@ -66,10 +71,11 @@ def main():
     try:
         ssh_manager.connect()
         with ssh_manager.client.cd(services_dir):
-            services = ssh_manager.execute_command('ls').stdout.split()
+            services = ssh_manager.execute_command('ls -d *').stdout.split()
 
             for service in services:
-                if '.zip' in service:
+
+                if 'ctf_firewall' in service or '.' in service:
                     continue
 
                 zip_file, port = process_service(ssh_manager, service)
