@@ -16,9 +16,16 @@ def get_service_ports_from_docker_ps(ssh_manager, service_name):
     output = ssh_manager.execute_command(command).stdout.strip()
 
     # parse ports
-    for entry in output.split(','):
-        host_port = entry.split('->')[0].split(':')[1]
-        return host_port
+    ports = []
+    try:
+        for entry in output.split(','):
+            host_port = entry.split('->')[0].split(':')[1]
+            if host_port:
+                ports.append(host_port)
+    except Exception as e:
+        logging.error(e)
+
+    return ports
 
 
 def process_service(ssh_manager, service):
@@ -41,15 +48,10 @@ def process_service(ssh_manager, service):
         ssh_manager.execute_command('docker ps')
 
     # get port of service
-    try:
-        port = get_service_ports_from_docker_ps(ssh_manager, service)
-        logging.info(f"Ports for service {service}: {port}")
+    ports = get_service_ports_from_docker_ps(ssh_manager, service)
+    logging.info(f"Ports for service {service}: {ports}")
 
-        return full_path_zip, port
-    except:
-        pass
-
-    return full_path_zip, None
+    return full_path_zip, ports
 
 
 def main():
@@ -74,23 +76,26 @@ def main():
             services = ssh_manager.execute_command('ls -d *').stdout.split()
 
             for service in services:
-
-                if 'ctf_firewall' in service or '.' in service:
+                if 'snap' in service or '.' in service or 'ctf_firewall' in service:
                     continue
 
-                zip_file, port = process_service(ssh_manager, service)
-                if not zip_file or not port:
+                zip_file, ports = process_service(ssh_manager, service)
+                if not zip_file or not ports:
                     logging.info(f"ERROR: {service}")
                     continue
+
+                caption = ""
+                for port in ports:
+                    caption += f"{hostname}:{port}\n"
 
                 # send to telegram
                 ssh_manager.execute_command(
                     f'curl -F "chat_id={chat_id}" -F "document=@{zip_file}" '
-                    f'-F "caption=http://{hostname}:{port}" '
+                    f'-F "caption={caption}" '
                     f'"https://api.telegram.org/bot{telegram_token}/sendDocument"')
 
-    finally:
-        pass
+    except Exception as e:
+        logging.error(e)
 
 
 if __name__ == "__main__":

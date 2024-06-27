@@ -1,6 +1,6 @@
 ssh:
   hostname: "172.205.192.202"
-  username: ""
+  username: "player2"
   password: ""
   token: ""
   services_dir: "services/"
