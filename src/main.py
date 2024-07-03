@@ -43,15 +43,13 @@ def process_service(ssh_manager, service):
         if 'docker-compose.yml' not in output:
             return None, None
 
-        # start the service
-        ssh_manager.execute_command('docker compose up -d')
-        ssh_manager.execute_command('docker ps')
+        try:
+            # start the service
+            ssh_manager.execute_command('docker compose up -d')
+        except Exception as ex:
+            print(ex)
 
-    # get port of service
-    ports = get_service_ports_from_docker_ps(ssh_manager, service)
-    logging.info(f"Ports for service {service}: {ports}")
-
-    return full_path_zip, ports
+    return full_path_zip
 
 
 def main():
@@ -79,19 +77,14 @@ def main():
                 if 'snap' in service or '.' in service or 'ctf_firewall' in service:
                     continue
 
-                zip_file, ports = process_service(ssh_manager, service)
-                if not zip_file or not ports:
+                zip_file = process_service(ssh_manager, service)
+                if not zip_file:
                     logging.info(f"ERROR: {service}")
                     continue
-
-                caption = ""
-                for port in ports:
-                    caption += f"{hostname}:{port}\n"
 
                 # send to telegram
                 ssh_manager.execute_command(
                     f'curl -F "chat_id={chat_id}" -F "document=@{zip_file}" '
-                    f'-F "caption={caption}" '
                     f'"https://api.telegram.org/bot{telegram_token}/sendDocument"')
 
     except Exception as e:
